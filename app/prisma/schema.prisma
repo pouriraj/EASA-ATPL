@@ -1,0 +1,94 @@
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "sqlite"
+    url      = env("DATABASE_URL")
+}
+
+model ExtractionJob {
+  id          String   @id @default(cuid())
+  name        String
+  status      String   @default("pending") // pending, running, paused, completed, failed
+  database    String   @default("EASA 2020")
+  subjects    String   // Comma-separated selected subjects
+  username    String   
+  totalQuestions Int   @default(0)
+  extractedQuestions Int @default(0)
+  failedQuestions Int @default(0)
+  startTime   DateTime?
+  endTime     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  logs        ExtractionLog[]
+  failedItems FailedQuestion[]
+  results     ExtractionResult[]
+  
+  @@map("extraction_jobs")
+}
+
+model ExtractionLog {
+  id        String   @id @default(cuid())
+  jobId     String
+  level     String   // info, warning, error
+  message   String
+  details   String?
+  timestamp DateTime @default(now())
+  
+  job       ExtractionJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  
+  @@map("extraction_logs")
+}
+
+model FailedQuestion {
+  id          String   @id @default(cuid())
+  jobId       String
+  questionId  String
+  subject     String
+  url         String?
+  error       String
+  retryCount  Int      @default(0)
+  timestamp   DateTime @default(now())
+  
+  job         ExtractionJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  
+  @@map("failed_questions")
+}
+
+model ExtractionResult {
+  id          String   @id @default(cuid())
+  jobId       String
+  subject     String
+  fileName    String
+  filePath    String
+  fileSize    Int
+  questionCount Int
+  createdAt   DateTime @default(now())
+  
+  job         ExtractionJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  
+  @@map("extraction_results")
+}
+
+model UserSettings {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  retryAttempts         Int      @default(3)
+  delayBetweenRequests  Int      @default(1000)
+  timeoutDuration       Int      @default(30000)
+  enableMediaExtraction Boolean  @default(true)
+  outputFormat          String   @default("excel")
+  database              String   @default("EASA 2020")
+  spreadsheetLayout     String   @default("by_subject")
+  includeExplanations   Boolean  @default(true)
+  includeComments       Boolean  @default(true)
+  includeMediaFiles     Boolean  @default(true)
+  mediaDownloadFormat   String   @default("original")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  @@map("user_settings")
+}
